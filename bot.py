@@ -10,6 +10,7 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     MessageHandler, filters, PreCheckoutQueryHandler, ContextTypes
 )
+from datetime import datetime, timedelta
 
 API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
@@ -62,14 +63,27 @@ async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     users = load_users()
-    users[str(user_id)] = int(time.time()) + 30 * 24 * 60 * 60
+    expire_at = int(time.time()) + 30 * 24 * 60 * 60
+    users[str(user_id)] = expire_at
     save_users(users)
 
-    try:
-        await context.bot.add_chat_members(CHANNEL_ID, [user_id])
-        await update.message.reply_text("✅ Спасибо за оплату! Ты добавлен в канал на 30 дней.")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка при добавлении: {e}")
+    # Создание персональной ссылки
+    expire_date = datetime.utcnow() + timedelta(days=30)
+    invite_link = await context.bot.create_chat_invite_link(
+        chat_id=CHANNEL_ID,
+        expire_date=expire_date,
+        member_limit=1
+    )
+
+    # Кнопка со ссылкой
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🚪 Вступить в канал", url=invite_link.invite_link)]
+    ])
+
+    await update.message.reply_text(
+        "✅ Спасибо за оплату! Нажми кнопку ниже, чтобы вступить в закрытый канал.",
+        reply_markup=keyboard
+    )
 
 async def check_access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
