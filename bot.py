@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import asyncio
 from telegram import (
     Update, InlineKeyboardMarkup, InlineKeyboardButton,
     LabeledPrice
@@ -81,6 +82,28 @@ async def check_access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("⛔ У тебя нет доступа или он истёк.")
 
+async def auto_cleanup(context: ContextTypes.DEFAULT_TYPE):
+    while True:
+        users = load_users()
+        now = int(time.time())
+        updated = False
+
+        for uid, expire in list(users.items()):
+            if expire < now:
+                try:
+                    await context.bot.ban_chat_member(CHANNEL_ID, int(uid))
+                    await context.bot.unban_chat_member(CHANNEL_ID, int(uid))
+                    print(f"⛔ Удалён пользователь {uid} по окончании доступа.")
+                except Exception as e:
+                    print(f"Ошибка при удалении {uid}: {e}")
+                users.pop(uid)
+                updated = True
+
+        if updated:
+            save_users(users)
+
+        await asyncio.sleep(1800)  # проверка каждые 30 минут
+
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -89,6 +112,8 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_button))
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
+
+    app.job_queue.run_once(lambda ctx: asyncio.create_task(auto_cleanup(ctx)), when=1)
 
     app.run_polling()
 
