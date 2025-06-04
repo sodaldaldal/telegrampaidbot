@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import json, os, logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice
