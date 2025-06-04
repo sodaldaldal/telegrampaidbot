@@ -1,6 +1,8 @@
-API_ID = 22650276
-API_HASH = "80daee44e0c17319873cfbb4a3e75b53"
-BOT_TOKEN = "7756763978:AAEp0HFCLMYIm5aJgyMr3nSTRYXss_wQ-tc"
-CHANNEL_USERNAME = "@Oplatesformates_bot"
-CHANNEL_ID = -1002672045693
-PAYMENT_PROVIDER_TOKEN = "387026696:LIVE:668419e5b4b621770c7b25ad"
+import os
+
+API_ID = int(os.environ.get("API_ID"))
+API_HASH = os.environ.get("API_HASH")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID"))
+PAYMENT_PROVIDER_TOKEN = os.environ.get("PAYMENT_PROVIDER_TOKEN")
+CHANNEL_USERNAME = os.environ.get("CHANNEL_USERNAME", "@Oplatesformates_bot")

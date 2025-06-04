@@ -41,7 +41,7 @@ async def buy_access(client, callback_query):
         payload="monthly_access",
         provider_token=PAYMENT_PROVIDER_TOKEN,
         currency="RUB",
-        prices=[LabeledPrice("Подписка", 19900)],  # Цена в копейках (199.00 RUB)
+        prices=[LabeledPrice("Подписка", 19900)],
         start_parameter="access-subscription",
     )
     await callback_query.answer()
