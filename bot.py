@@ -12,7 +12,7 @@ from telegram.ext import (
 )
 
 API_ID = int(os.environ.get("API_ID"))
-API_HASH = os.environ.get("API_HASH")  # Не используется здесь
+API_HASH = os.environ.get("API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = int(os.environ.get("CHANNEL_ID"))
 PAYMENT_PROVIDER_TOKEN = os.environ.get("PAYMENT_PROVIDER_TOKEN")
@@ -43,7 +43,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    prices = [LabeledPrice("Подписка", 19900)]  # в копейках
+    prices = [LabeledPrice("Подписка", 199000)]  # 1990.00 UZS
 
     await context.bot.send_invoice(
         chat_id=query.from_user.id,
@@ -51,7 +51,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         description="После оплаты вы получите автоматический доступ.",
         payload="monthly_access",
         provider_token=PAYMENT_PROVIDER_TOKEN,
-        currency="RUB",
+        currency="UZS",
         prices=prices,
         start_parameter="access-subscription"
     )
@@ -82,7 +82,7 @@ async def check_access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("⛔ У тебя нет доступа или он истёк.")
 
-async def auto_cleanup(context: ContextTypes.DEFAULT_TYPE):
+async def auto_cleanup(bot):
     while True:
         users = load_users()
         now = int(time.time())
@@ -91,8 +91,8 @@ async def auto_cleanup(context: ContextTypes.DEFAULT_TYPE):
         for uid, expire in list(users.items()):
             if expire < now:
                 try:
-                    await context.bot.ban_chat_member(CHANNEL_ID, int(uid))
-                    await context.bot.unban_chat_member(CHANNEL_ID, int(uid))
+                    await bot.ban_chat_member(CHANNEL_ID, int(uid))
+                    await bot.unban_chat_member(CHANNEL_ID, int(uid))
                     print(f"⛔ Удалён пользователь {uid} по окончании доступа.")
                 except Exception as e:
                     print(f"Ошибка при удалении {uid}: {e}")
@@ -102,7 +102,10 @@ async def auto_cleanup(context: ContextTypes.DEFAULT_TYPE):
         if updated:
             save_users(users)
 
-        await asyncio.sleep(1800)  # проверка каждые 30 минут
+        await asyncio.sleep(1800)  # каждые 30 минут
+
+async def run_cleanup(app):
+    await auto_cleanup(app.bot)
 
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -113,7 +116,8 @@ def main():
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
 
-    app.job_queue.run_once(lambda ctx: asyncio.create_task(auto_cleanup(ctx)), when=1)
+    # Запускаем фоновую задачу вручную
+    asyncio.create_task(run_cleanup(app))
 
     app.run_polling()
 
