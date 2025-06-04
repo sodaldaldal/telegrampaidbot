@@ -43,7 +43,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    prices = [LabeledPrice("Подписка", 199000)]  # 1990.00 UZS
+    prices = [LabeledPrice("Подписка", 5000000)]  # 50,000 сум
 
     await context.bot.send_invoice(
         chat_id=query.from_user.id,
