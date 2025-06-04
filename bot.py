@@ -102,22 +102,19 @@ async def auto_cleanup(bot):
         if updated:
             save_users(users)
 
-        await asyncio.sleep(1800)  # каждые 30 минут
+        await asyncio.sleep(1800)
 
-async def run_cleanup(app):
-    await auto_cleanup(app.bot)
+async def on_startup(app):
+    asyncio.create_task(auto_cleanup(app.bot))
 
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).post_init(on_startup).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("check", check_access))
     app.add_handler(CallbackQueryHandler(handle_button))
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
-
-    # Запускаем фоновую задачу вручную
-    asyncio.create_task(run_cleanup(app))
 
     app.run_polling()
 
