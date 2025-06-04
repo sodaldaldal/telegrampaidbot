@@ -70,9 +70,9 @@ async def service_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     svc = SERVICES.get(key)
     if not svc:
         return await update.callback_query.answer("Неизвестная услуга.")
-    text = f"🔹 <b>{svc['title']}</b>\n\n💬 {svc['desc']}\n💰 Цена: {svc['price']//100000} сум"
+        text = f"🔹 <b>{svc['title']}</b>\n\n💬 {svc['desc']}\n💰 Цена: {svc['price']//100000} сум"
 
-💬 {svc['desc']}
+        text = f"🔹 <b>{svc['title']}</b>\n\n💬 {svc['desc']}\n💰 Цена: {svc['price']//100000} сум"
 💰 Цена: {svc['price']//100000} сум"
     keyboard = [
         [InlineKeyboardButton("✅ Купить", callback_data=f"buy_{key}")],
