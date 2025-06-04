@@ -119,6 +119,7 @@ async def auto_cleanup(bot):
         await asyncio.sleep(1800)
 
 async def on_startup(app):
+    await app.bot.delete_webhook(drop_pending_updates=True)
     asyncio.create_task(auto_cleanup(app.bot))
 
 def main():
@@ -130,7 +131,6 @@ def main():
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
 
-    asyncio.run(app.bot.delete_webhook(drop_pending_updates=True))
     app.run_polling()
 
 if __name__ == "__main__":
