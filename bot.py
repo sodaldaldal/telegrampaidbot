@@ -70,12 +70,12 @@ async def service_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     svc = SERVICES.get(key)
     if not svc:
         return await update.callback_query.answer("Неизвестная услуга.")
-        text = f"🔹 <b>{svc['title']}</b>\n\n💬 {svc['desc']}\n💰 Цена: {svc['price']//100000} сум"
+        text = f"\U0001F539 <b>{svc['title']}</b>\n\n\U0001F4AC {svc['desc']}\n\U0001F4B0 Цена: {svc['price']//100000} сум"
 
-        text = f"🔹 <b>{svc['title']}</b>\n\n💬 {svc['desc']}\n💰 Цена: {svc['price']//100000} сум"
-💰 Цена: {svc['price']//100000} сум"
+        text = f"\U0001F539 <b>{svc['title']}</b>\n\n\U0001F4AC {svc['desc']}\n\U0001F4B0 Цена: {svc['price']//100000} сум"
+\U0001F4B0 Цена: {svc['price']//100000} сум"
     keyboard = [
-        [InlineKeyboardButton("✅ Купить", callback_data=f"buy_{key}")],
+        [InlineKeyboardButton("\u2705 Купить", callback_data=f"buy_{key}")],
         [InlineKeyboardButton("◀️ Назад", callback_data="back_menu")]
     ]
     await update.callback_query.edit_message_text(text, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -117,7 +117,7 @@ async def precheckout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def success_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_order({"user": update.effective_user.id, "service": update.message.successful_payment.invoice_payload, "time": str(datetime.utcnow())})
-    await update.message.reply_text("✅ Оплата прошла успешно!")
+    await update.message.reply_text("\u2705 Оплата прошла успешно!")
 
 async def send_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.edit_message_text("📤 Пожалуйста, отправьте скриншот или текст чека.")
@@ -131,7 +131,7 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_photo(ADMIN_ID, photo=update.message.photo[-1].file_id)
         elif update.message.text:
             await context.bot.send_message(ADMIN_ID, text=update.message.text)
-        await update.message.reply_text("✅ Чек отправлен на проверку.")
+        await update.message.reply_text("\u2705 Чек отправлен на проверку.")
         context.user_data["awaiting_check"] = False
 
 async def on_startup(app):
