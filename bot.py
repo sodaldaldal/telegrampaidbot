@@ -1,6 +1,6 @@
 import os
-import asyncio
 from datetime import datetime, timedelta
+
 from telegram import (
     Update,
     InlineKeyboardMarkup,
@@ -40,7 +40,7 @@ services = [
     },
     {
         "title": "🤖 5$ ChatGPT Plus + Sora",
-        "desc": "🧠 Доступ к ChatGPT Plus и Sora.",
+        "desc": "🧠 Доступ к ChatGPT Plus и Sора.",
         "price": 600000,
         "channel_id": CHANNEL_ID,
     },
@@ -101,6 +101,7 @@ async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     index = int(query.data.split("_")[1])
     svc = services[index]
+    # если цена в тиынах, то показываем сумму в тысячах сум
     price_sum = svc["price"] // 1000 if svc["price"] else 0
 
     invoice_text = (
@@ -175,6 +176,7 @@ async def pay_payme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     idx = int(query.data.split("_")[2])
     svc = services[idx]
 
+    # Если услуга бесплатная, сразу выдаём приглашение
     if svc["price"] == 0:
         invite_link = await make_one_time_invite_link(context, svc["channel_id"])
         keyboard = [[InlineKeyboardButton("🔗 Перейти в канал", url=invite_link)]]
@@ -185,13 +187,14 @@ async def pay_payme(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    amount_tiyin = svc["price"] * 100
+    amount_tiyin = svc["price"] * 100  # в тиынах
     title = svc["title"]
     description = svc["desc"]
     payload = f"payload_service_{idx}"
     currency = "UZS"
     prices = [LabeledPrice(label=title, amount=amount_tiyin)]
 
+    # Отправляем invoice
     await query.message.reply_invoice(
         title=title,
         description=description,
@@ -245,11 +248,11 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     )
 
 
-async def main():
+def main():
+    # Строим приложение бота
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    await app.bot.delete_webhook(drop_pending_updates=True)
-
+    # Регистрируем все хендлеры
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(lang_select, pattern="^lang_"))
     app.add_handler(CallbackQueryHandler(service_selected, pattern="^svc_"))
@@ -260,8 +263,9 @@ async def main():
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
 
-    await app.run_polling()
+    # Запускаем polling; drop_pending_updates=True сбросит накопленные апдейты
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(main())
+    main()
