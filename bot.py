@@ -319,39 +319,45 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
 # ------------------------------------------------------------------
 # 13) Основной запуск бота
 # ------------------------------------------------------------------
+import asyncio  # добавь в начало, если ещё нет
+
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    async def run():
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # /start
-    app.add_handler(CommandHandler("start", start))
+        # Удаляем старый вебхук перед polling
+        await app.bot.delete_webhook(drop_pending_updates=True)
 
-    # Выбор языка
-    app.add_handler(CallbackQueryHandler(lang_select, pattern="^lang_"))
+        # /start
+        app.add_handler(CommandHandler("start", start))
 
-    # Выбор услуги
-    app.add_handler(CallbackQueryHandler(service_selected, pattern="^svc_"))
+        # Выбор языка
+        app.add_handler(CallbackQueryHandler(lang_select, pattern="^lang_"))
 
-    # Назад к списку услуг
-    app.add_handler(CallbackQueryHandler(back_to_services, pattern="^back_to_services$"))
+        # Выбор услуги
+        app.add_handler(CallbackQueryHandler(service_selected, pattern="^svc_"))
 
-    # Click (заглушка)
-    app.add_handler(CallbackQueryHandler(pay_click, pattern="^pay_click_"))
+        # Назад к списку услуг
+        app.add_handler(CallbackQueryHandler(back_to_services, pattern="^back_to_services$"))
 
-    # Оплата вручную
-    app.add_handler(CallbackQueryHandler(pay_manual, pattern="^pay_manual_"))
+        # Click (заглушка)
+        app.add_handler(CallbackQueryHandler(pay_click, pattern="^pay_click_"))
 
-    # Оплата через Payme
-    app.add_handler(CallbackQueryHandler(pay_payme, pattern="^pay_payme_"))
+        # Оплата вручную
+        app.add_handler(CallbackQueryHandler(pay_manual, pattern="^pay_manual_"))
 
-    # pre_checkout_query
-    app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
+        # Оплата через Payme
+        app.add_handler(CallbackQueryHandler(pay_payme, pattern="^pay_payme_"))
 
-    # Успешная оплата
-    app.add_handler(
-        MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback)
-    )
+        # pre_checkout_query
+        app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 
-    app.run_polling()
+        # Успешная оплата
+        app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
+
+        await app.run_polling()
+
+    asyncio.run(run())
 
 if __name__ == "__main__":
     main()
