@@ -1,4 +1,5 @@
 import os
+import asyncio
 from datetime import datetime, timedelta
 from telegram import (
     Update,
@@ -16,21 +17,13 @@ from telegram.ext import (
     filters,
 )
 
-# ------------------------------------------------------------------
-# 1) Читаем токены и конфиг из config.py
-# ------------------------------------------------------------------
 from config import BOT_TOKEN, PAYMENT_PROVIDER_TOKEN, CHANNEL_ID
 
-# ------------------------------------------------------------------
-# 2) Описание всех услуг (каждая услуга — title, desc, price в сумах)
-#    При необходимости можно дописать для каждой услуги отдельный channel_id,
-#    но в данном примере все оплачиваемые услуги ведут в один канал: CHANNEL_ID.
-# ------------------------------------------------------------------
 services = [
     {
         "title": "🔒 Приватный канал",
         "desc": "🔐 Доступ к закрытому Telegram-каналу на 30 дней.",
-        "price": 500000,  # сумма в UZS (500 000 сум)
+        "price": 500000,
         "channel_id": CHANNEL_ID,
     },
     {
@@ -42,7 +35,7 @@ services = [
     {
         "title": "💻 10$ Adobe Creative Cloud + Epidemicsounds",
         "desc": "🎨 Аккаунт на месяц с подпиской на Adobe CC и Epidemicsounds.",
-        "price": 1200000,  # 1 200 000 сум
+        "price": 1200000,
         "channel_id": CHANNEL_ID,
     },
     {
@@ -71,9 +64,7 @@ services = [
     },
 ]
 
-# ------------------------------------------------------------------
-# 3) /start — показываем выбор языка
-# ------------------------------------------------------------------
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
@@ -85,14 +76,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
     )
 
-# ------------------------------------------------------------------
-# 4) Сохраняем язык и выводим меню услуг
-# ------------------------------------------------------------------
+
 async def lang_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    lang = query.data.split("_")[1]  # "ru" или "uz"
+    lang = query.data.split("_")[1]
     context.user_data["lang"] = lang
 
     keyboard = [
@@ -105,16 +94,14 @@ async def lang_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
     )
 
-# ------------------------------------------------------------------
-# 5) При выборе услуги показываем «чек» + кнопки способов оплаты
-# ------------------------------------------------------------------
+
 async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     index = int(query.data.split("_")[1])
     svc = services[index]
-    price_sum = svc["price"] // 1000 if svc["price"] else 0  # для отображения “xxx 000 сум”
+    price_sum = svc["price"] // 1000 if svc["price"] else 0
 
     invoice_text = (
         "🧾 <b>Чек заказа:</b>\n\n"
@@ -122,26 +109,10 @@ async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     pay_keyboard = [
-        [
-            InlineKeyboardButton(
-                "💳 Оплатить Click", callback_data=f"pay_click_{index}"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏦 Оплата вручную", callback_data=f"pay_manual_{index}"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📲 Оплата через Payme", callback_data=f"pay_payme_{index}"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔙 Назад к услугам", callback_data="back_to_services"
-            )
-        ],
+        [InlineKeyboardButton("💳 Оплатить Click", callback_data=f"pay_click_{index}")],
+        [InlineKeyboardButton("🏦 Оплата вручную", callback_data=f"pay_manual_{index}")],
+        [InlineKeyboardButton("📲 Оплата через Payme", callback_data=f"pay_payme_{index}")],
+        [InlineKeyboardButton("🔙 Назад к услугам", callback_data="back_to_services")],
     ]
 
     await query.edit_message_text(
@@ -151,9 +122,7 @@ async def service_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         disable_web_page_preview=True,
     )
 
-# ------------------------------------------------------------------
-# 6) Возвращение в список услуг
-# ------------------------------------------------------------------
+
 async def back_to_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -168,26 +137,19 @@ async def back_to_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
     )
 
-# ------------------------------------------------------------------
-# 7) Click—заглушка
-# ------------------------------------------------------------------
+
 async def pay_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     await query.edit_message_text(
-        "ℹ️ <b>Оплата через Click</b> пока недоступна.\n\n"
-        "Мы уведомим вас, как только опция заработает!",
+        "ℹ️ <b>Оплата через Click</b> пока недоступна.\n\nМы уведомим вас, как только опция заработает!",
         parse_mode="HTML",
     )
 
-# ------------------------------------------------------------------
-# 8) Инструкция «Оплата вручную»
-# ------------------------------------------------------------------
+
 async def pay_manual(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     idx = int(query.data.split("_")[2])
     svc = services[idx]
     price_sum = svc["price"] // 1000 if svc["price"] else 0
@@ -195,20 +157,17 @@ async def pay_manual(update: Update, context: ContextTypes.DEFAULT_TYPE):
     manual_text = (
         f"🏦 <b>Инструкция по ручной оплате</b>\n\n"
         f"Вы выбрали: <b>{svc['title']}</b> (стоимость <b>{price_sum} 000 сум</b>).\n\n"
-        f"1. Переведите <b>{price_sum} 000 сум</b> на один из счетов:\n"
-        "   • <b>Номер карты:</b> 1234 5678 9012 3456\n"
-        "   • <b>Получатель:</b> Иванов Иван Иванович\n"
+        f"1. Переведите <b>{price_sum} 000 сум</b> на:\n"
+        "   • <b>Карта:</b> 1234 5678 9012 3456\n"
+        "   • <b>Получатель:</b> Иванов Иван\n"
         f"   • <b>Назначение:</b> Оплата за «{svc['title']}»\n\n"
-        "2. После перевода пришлите скриншот/чек в этот чат.\n"
-        "   Наш менеджер проверит платёж и вручную выдаст доступ.\n\n"
-        "Если вопросы — пишите в поддержку: @VashaPodderzhka"
+        "2. Пришлите скрин в чат. Мы проверим и откроем доступ.\n"
+        "   Поддержка: @VashaPodderzhka"
     )
 
     await query.edit_message_text(manual_text, parse_mode="HTML")
 
-# ------------------------------------------------------------------
-# 9) Обработка «Оплата через Payme» (Telegram-инвойс)
-# ------------------------------------------------------------------
+
 async def pay_payme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -216,26 +175,20 @@ async def pay_payme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     idx = int(query.data.split("_")[2])
     svc = services[idx]
 
-    # Если цена = 0, выдаём одноразовую ссылку сразу
     if svc["price"] == 0:
         invite_link = await make_one_time_invite_link(context, svc["channel_id"])
-        # Отправляем пользователю кнопку
-        keyboard = [
-            [InlineKeyboardButton("🔗 Перейти в канал", url=invite_link)]
-        ]
+        keyboard = [[InlineKeyboardButton("🔗 Перейти в канал", url=invite_link)]]
         await query.edit_message_text(
-            "✅ Эта услуга бесплатна. Нажмите кнопку ниже, чтобы войти в канал:",
+            "✅ Бесплатный доступ. Жмите кнопку ниже:",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="HTML",
         )
         return
 
-    # Подготовка инвойса
-    amount_tiyin = svc["price"] * 100  # переводим сумы в тийины
+    amount_tiyin = svc["price"] * 100
     title = svc["title"]
     description = svc["desc"]
     payload = f"payload_service_{idx}"
-    provider_token = PAYMENT_PROVIDER_TOKEN
     currency = "UZS"
     prices = [LabeledPrice(label=title, amount=amount_tiyin)]
 
@@ -243,22 +196,15 @@ async def pay_payme(update: Update, context: ContextTypes.DEFAULT_TYPE):
         title=title,
         description=description,
         payload=payload,
-        provider_token=provider_token,
+        provider_token=PAYMENT_PROVIDER_TOKEN,
         currency=currency,
         prices=prices,
         start_parameter=f"start_{idx}",
     )
 
-# ------------------------------------------------------------------
-# 10) Функция для генерации одноразовой пригласительной ссылки
-# ------------------------------------------------------------------
-async def make_one_time_invite_link(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> str:
-    """
-    Создаёт одноразовую ссылку с member_limit=1 и expire_date через 24 часа.
-    Возвращает саму ссылку (invite_link).
-    """
-    expire_unix = int((datetime.utcnow() + timedelta(hours=24)).timestamp())
 
+async def make_one_time_invite_link(context, chat_id: int) -> str:
+    expire_unix = int((datetime.utcnow() + timedelta(hours=24)).timestamp())
     link_obj = await context.bot.create_chat_invite_link(
         chat_id=chat_id,
         expire_date=expire_unix,
@@ -266,98 +212,56 @@ async def make_one_time_invite_link(context: ContextTypes.DEFAULT_TYPE, chat_id:
     )
     return link_obj.invite_link
 
-# ------------------------------------------------------------------
-# 11) pre_checkout_query нужно подтвердить
-# ------------------------------------------------------------------
+
 async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.pre_checkout_query.answer(ok=True)
 
-# ------------------------------------------------------------------
-# 12) После успешной оплаты выдаём одноразовую ссылку-кнопку
-# ------------------------------------------------------------------
+
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     payment = update.message.successful_payment.to_dict()
     chat_id = update.message.chat.id
     payload = payment.get("invoice_payload", "")
     try:
         idx = int(payload.split("_")[-1])
-    except (ValueError, IndexError):
+    except Exception:
         idx = None
 
-    # Если распарсили индекс услуги и у неё есть channel_id
     if idx is not None and 0 <= idx < len(services):
         svc = services[idx]
-        channel_id = svc.get("channel_id")
-        # Генерируем одноразовую ссылку
-        invite_link = await make_one_time_invite_link(context, channel_id)
-
-        # Формируем кнопку «Перейти в канал»
-        keyboard = [
-            [InlineKeyboardButton("🔗 Перейти в канал", url=invite_link)]
-        ]
+        invite_link = await make_one_time_invite_link(context, svc["channel_id"])
+        keyboard = [[InlineKeyboardButton("🔗 Перейти в канал", url=invite_link)]]
         await context.bot.send_message(
             chat_id=chat_id,
-            text=(
-                f"🎉 <b>Платёж принят!</b>\n\n"
-                f"Нажмите кнопку ниже, чтобы перейти в приватный канал:"
-            ),
+            text="🎉 <b>Платёж принят!</b>\n\nЖмите кнопку ниже для доступа:",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="HTML",
         )
         return
 
-    # Если payload не распарсился, просто благодарим
     await context.bot.send_message(
         chat_id=chat_id,
-        text=(
-            "🎉 <b>Платёж принят успешно!</b>\n"
-            "Спасибо за покупку. Доступ отправлю вам вручную."
-        ),
+        text="🎉 <b>Платёж принят успешно!</b>\nДоступ откроем вручную.",
         parse_mode="HTML",
     )
 
-# ------------------------------------------------------------------
-# 13) Основной запуск бота
-# ------------------------------------------------------------------
-import asyncio  # добавь в начало, если ещё нет
 
-def main():
-    async def run():
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-        # Удаляем старый вебхук перед polling
-        await app.bot.delete_webhook(drop_pending_updates=True)
+    await app.bot.delete_webhook(drop_pending_updates=True)
 
-        # /start
-        app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(lang_select, pattern="^lang_"))
+    app.add_handler(CallbackQueryHandler(service_selected, pattern="^svc_"))
+    app.add_handler(CallbackQueryHandler(back_to_services, pattern="^back_to_services$"))
+    app.add_handler(CallbackQueryHandler(pay_click, pattern="^pay_click_"))
+    app.add_handler(CallbackQueryHandler(pay_manual, pattern="^pay_manual_"))
+    app.add_handler(CallbackQueryHandler(pay_payme, pattern="^pay_payme_"))
+    app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
+    app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
 
-        # Выбор языка
-        app.add_handler(CallbackQueryHandler(lang_select, pattern="^lang_"))
+    await app.run_polling()
 
-        # Выбор услуги
-        app.add_handler(CallbackQueryHandler(service_selected, pattern="^svc_"))
-
-        # Назад к списку услуг
-        app.add_handler(CallbackQueryHandler(back_to_services, pattern="^back_to_services$"))
-
-        # Click (заглушка)
-        app.add_handler(CallbackQueryHandler(pay_click, pattern="^pay_click_"))
-
-        # Оплата вручную
-        app.add_handler(CallbackQueryHandler(pay_manual, pattern="^pay_manual_"))
-
-        # Оплата через Payme
-        app.add_handler(CallbackQueryHandler(pay_payme, pattern="^pay_payme_"))
-
-        # pre_checkout_query
-        app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
-
-        # Успешная оплата
-        app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
-
-        await app.run_polling()
-
-    asyncio.run(run())
 
 if __name__ == "__main__":
-    main()
+    asyncio.get_event_loop().run_until_complete(main())
